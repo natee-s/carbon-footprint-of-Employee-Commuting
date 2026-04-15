@@ -1,0 +1,18 @@
+# Dependencies
+node_modules/
+
+# Environment Variables (ไฟล์ความลับ)
+.env
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Build directory (เผื่ออนาคตมีการ build โค้ด)
+dist/
+build/
+
+# OS generated files
+.DS_Store
+Thumbs.db
