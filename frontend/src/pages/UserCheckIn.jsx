@@ -1,37 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { Car, Bus, Train, Bike, Copy, CheckCircle, Send } from 'lucide-react';
+import { Car, Bus, Train, Bike, CheckCircle, Send, Leaf, Calendar, Zap } from 'lucide-react';
 
 export default function UserCheckIn() {
-  // --- 1. State สำหรับเก็บข้อมูลจาก Backend ---
-  const [factors, setFactors] = useState([]); // เก็บค่า EF 
-  const [routes, setRoutes] = useState([]);   // เก็บสายรถตู้
+  const [factors, setFactors] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [showSummary, setShowSummary] = useState(false);
+  const [totalResult, setTotalResult] = useState(0);
 
-  // --- 2. State สำหรับเก็บข้อมูลที่พนักงานกำลังกรอก ---
-  // ขามา (Leg 1)
-  const [leg1, setLeg1] = useState({
-    transportType: '',
-    fuelType: 'เบนซิน',
-    carPoolRole: 'Driver',
-    occupancy: 1,
-    vanRouteName: '',
-    distance: ''
-  });
+  const userInfo = { name: "คุณแมน (Natee Siriudom)" }; 
+  const today = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
 
-  // ขากลับ (Leg 2)
-  const [leg2, setLeg2] = useState({
-    transportType: '',
-    fuelType: 'เบนซิน',
-    carPoolRole: 'Driver',
-    occupancy: 1,
-    vanRouteName: '',
-    distance: ''
-  });
-
-  const [sameAsLeg1, setSameAsLeg1] = useState(false); // สวิตช์ "ขากลับเหมือนขามา"
-  const [message, setMessage] = useState('');
+  const [leg1, setLeg1] = useState({ transportType: '', fuelType: 'เบนซิน', carPoolRole: 'Driver', occupancy: 1, vanRouteName: '', distance: '' });
+  const [leg2, setLeg2] = useState({ transportType: '', fuelType: 'เบนซิน', carPoolRole: 'Driver', occupancy: 1, vanRouteName: '', distance: '' });
+  const [sameAsLeg1, setSameAsLeg1] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // --- 3. ดึงข้อมูล EF และสายรถตู้ตอนเปิดหน้าเว็บ ---
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -43,213 +26,260 @@ export default function UserCheckIn() {
         const routeJson = await routeRes.json();
         if (efJson.success) setFactors(efJson.data);
         if (routeJson.success) setRoutes(routeJson.data);
-      } catch (err) {
-        console.error('โหลดข้อมูลอ้างอิงไม่สำเร็จ');
-      }
+      } catch (err) { console.error('Error fetching data'); }
     };
     fetchData();
   }, []);
 
-  // --- 4. Logic การคำนวณคาร์บอน (แบบ Real-time ก่อนส่ง) ---
-  const calculateCarbon = (data) => {
-    // 1. ถ้ารถรับส่งบริษัท หรือ เดิน/จักรยาน ให้คาร์บอนเป็น 0 ไปก่อน (เดี๋ยวแอดมินไปหารเฉลี่ยปลายเดือน)
-    if (data.transportType === 'รถรับส่งบริษัท' || data.transportType === 'เดิน/จักรยาน') return 0;
-    
-    // 2. หาค่า EF จากตารางที่โหลดมา
-    const factorObj = factors.find(f => f.transportType === data.transportType && (data.transportType !== 'รถยนต์ส่วนตัว' || f.fuelType === data.fuelType));
-    
-    // ถ้าหาค่า EF ไม่เจอ ให้เป็น 0 ไว้ก่อน
-    if (!factorObj) return 0;
-
-    // 3. สูตรคำนวณ: (ระยะทาง x ค่า EF) / จำนวนคน
-    const totalCarbon = (Number(data.distance) * factorObj.efValue) / Number(data.occupancy);
-    return totalCarbon; // คืนค่าตัวเลขกลับไป
-  };
-
-  // --- 5. เมื่อกดสวิตช์ "ขากลับเหมือนขามา" ---
-  const handleToggleSame = () => {
-    setSameAsLeg1(!sameAsLeg1);
-    if (!sameAsLeg1) {
-      setLeg2(leg1); // ก๊อปปี้ข้อมูลขามา ไปทับขากลับทันที
+  const handleOneClickFill = async () => {
+    setLoading(true);
+    try {
+      const response = await fetch('http://localhost:5000/api/carbon');
+      const json = await response.json();
+      if (json.success && json.data.length > 0) {
+        const lastLeg1 = json.data.find(r => r.leg === 'ขามาทำงาน');
+        if (lastLeg1) {
+          setLeg1({
+            transportType: lastLeg1.transportType,
+            fuelType: lastLeg1.fuelType || 'เบนซิน',
+            carPoolRole: lastLeg1.carPoolRole || 'Driver',
+            occupancy: lastLeg1.occupancy || 1,
+            vanRouteName: lastLeg1.vanRouteName || '',
+            distance: lastLeg1.distance || ''
+          });
+          setSameAsLeg1(true); 
+          alert('✨ ดึงข้อมูลการเดินทางล่าสุดของคุณมาเติมให้เรียบร้อยแล้วครับ!');
+        } else {
+          alert('ยังไม่พบประวัติการเดินทางของคุณครับ');
+        }
+      }
+    } catch (err) {
+      alert('ไม่สามารถดึงข้อมูลเก่าได้ครับ');
     }
+    setLoading(false);
   };
 
-  // --- 6. ฟังก์ชันเมื่อกดปุ่ม "ส่งข้อมูล" ---
+  const handleToggleSame = () => setSameAsLeg1(!sameAsLeg1);
+
+  const calculateCarbon = (data) => {
+    let dist = Number(data.distance);
+    let divisor = Number(data.occupancy) || 1;
+    if (data.transportType === 'รถรับส่งบริษัท') {
+      const route = routes.find(r => r.routeName === data.vanRouteName);
+      dist = route ? route.distance : 0;
+      divisor = route?.passengerCount || 1;
+    }
+    const factorObj = factors.find(f => f.transportType === data.transportType && (data.transportType !== 'รถยนต์ส่วนตัว' || f.fuelType === data.fuelType));
+    if (!factorObj || dist === 0) return 0;
+    return (dist * factorObj.efValue) / divisor;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setMessage('กำลังบันทึกข้อมูล...');
+    const c1 = calculateCarbon(leg1);
+    const c2 = calculateCarbon(sameAsLeg1 ? leg1 : leg2);
+    const sum = c1 + c2;
 
     try {
-      // เตรียมข้อมูลขามา
-      const payload1 = {
-        activityType: 'Employee Commuting',
-        leg: 'ขามาทำงาน',
-        ...leg1,
-        carbonEmission: calculateCarbon(leg1)
-      };
-
-      // เตรียมข้อมูลขากลับ (ดึงจาก leg2 หรือ leg1 ขึ้นอยู่กับปุ่มสวิตช์)
-      const finalLeg2 = sameAsLeg1 ? leg1 : leg2;
-      const payload2 = {
-        activityType: 'Employee Commuting',
-        leg: 'ขากลับบ้าน',
-        ...finalLeg2,
-        carbonEmission: calculateCarbon(finalLeg2)
-      };
-
-      // ยิงข้อมูล 2 ก้อนไปหา Backend พร้อมกัน
       await Promise.all([
-        fetch('http://localhost:5000/api/carbon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload1) }),
-        fetch('http://localhost:5000/api/carbon', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload2) })
+        fetch('http://localhost:5000/api/carbon', { 
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ ...leg1, activityType: 'Employee Commuting', carbonEmission: c1, leg: 'ขามาทำงาน' }) 
+        }),
+        fetch('http://localhost:5000/api/carbon', { 
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, 
+          body: JSON.stringify({ ...(sameAsLeg1 ? leg1 : leg2), activityType: 'Employee Commuting', carbonEmission: c2, leg: 'ขากลับบ้าน' }) 
+        })
       ]);
-
-      setMessage('✅ บันทึกการเดินทางสำเร็จ! ขอบคุณที่ช่วยลดคาร์บอน');
-      // รีเซ็ตฟอร์ม
-      setTimeout(() => window.location.reload(), 2000); 
-    } catch (err) {
-      setMessage('❌ เกิดข้อผิดพลาดในการส่งข้อมูล');
-    } finally {
-      setLoading(false);
-    }
+      setTotalResult(sum);
+      setShowSummary(true);
+    } catch (err) { alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล'); }
+    setLoading(false);
   };
 
-  // --- Component ย่อย: ปุ่มการ์ดเลือกพาหนะ (ช่วยให้โค้ดดูสะอาดขึ้น) ---
-  const TransportCard = ({ icon: Icon, title, legData, setLegData }) => (
-    <div 
-      onClick={() => setLegData({ ...legData, transportType: title, fuelType: 'เบนซิน', occupancy: 1, distance: '' })}
-      className={`cursor-pointer p-4 rounded-xl border-2 text-center transition flex flex-col items-center gap-2
-        ${legData.transportType === title ? 'border-green-500 bg-green-50 text-green-700' : 'border-gray-200 hover:border-green-300'}`}
-    >
-      <Icon size={32} className={legData.transportType === title ? 'text-green-600' : 'text-gray-400'} />
-      <span className="font-semibold text-sm">{title}</span>
+  // 🛠️ แก้บั๊กข้อ 1: เปลี่ยนจาก Component (const SubForm = () =>) เป็นฟังก์ชัน Render ธรรมดา
+  const renderSubForm = (data, setData) => (
+    <div className="mt-5 space-y-4 animate-in slide-in-from-top-4 duration-300">
+      {data.transportType === 'รถยนต์ส่วนตัว' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-5 bg-white/60 backdrop-blur-md rounded-[2rem] border border-blue-100 shadow-sm">
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-slate-500 tracking-widest">บทบาท</label>
+            <select value={data.carPoolRole} onChange={e => setData({...data, carPoolRole: e.target.value})} className="w-full bg-white p-4 rounded-2xl border-none shadow-sm outline-none focus:ring-4 focus:ring-blue-500/20 text-slate-700 font-bold cursor-pointer transition-all">
+              <option value="Driver">ฉันเป็นคนขับ</option>
+              <option value="Passenger">นั่งมากับเพื่อน</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-slate-500 tracking-widest">เชื้อเพลิง</label>
+            <select value={data.fuelType} onChange={e => setData({...data, fuelType: e.target.value})} className="w-full bg-white p-4 rounded-2xl border-none shadow-sm outline-none focus:ring-4 focus:ring-blue-500/20 text-slate-700 font-bold cursor-pointer transition-all">
+              <option value="เบนซิน">เบนซิน</option>
+              <option value="ดีเซล">ดีเซล</option>
+              <option value="EV">ไฟฟ้า (EV)</option>
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-slate-500 tracking-widest">ระยะทาง (กม.)</label>
+            <input type="number" min="0" value={data.distance} onChange={e => setData({...data, distance: e.target.value})} className="w-full bg-white p-4 rounded-2xl border-none shadow-sm outline-none focus:ring-4 focus:ring-blue-500/20 text-blue-600 font-black text-lg transition-all" placeholder="0" required />
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-slate-500 tracking-widest">จำนวนคนบนรถ</label>
+            <input type="number" min="1" value={data.occupancy} onChange={e => setData({...data, occupancy: e.target.value})} className="w-full bg-white p-4 rounded-2xl border-none shadow-sm outline-none focus:ring-4 focus:ring-blue-500/20 text-slate-700 font-black text-lg transition-all" required />
+          </div>
+        </div>
+      )}
+      
+      {data.transportType === 'รถรับส่งบริษัท' && (
+        <div className="p-5 bg-white/60 backdrop-blur-md rounded-[2rem] border border-blue-100 shadow-sm">
+          <label className="text-xs font-black text-slate-500 tracking-widest mb-2 block">เลือกสายรถตู้</label>
+          <select value={data.vanRouteName} onChange={e => setData({...data, vanRouteName: e.target.value})} className="w-full bg-white p-4 rounded-2xl border-none shadow-sm outline-none focus:ring-4 focus:ring-blue-500/20 text-blue-600 font-black text-lg cursor-pointer transition-all" required>
+            <option value="">-- กรุณาเลือกสายรถตู้ --</option>
+            {routes.map(r => <option key={r._id} value={r.routeName}>{r.routeName}</option>)}
+          </select>
+        </div>
+      )}
+
+      {(data.transportType === 'รถจักรยานยนต์' || data.transportType === 'รถโดยสารสาธารณะ') && (
+        <div className="p-5 bg-white/60 backdrop-blur-md rounded-[2rem] border border-blue-100 shadow-sm">
+          <label className="text-xs font-black text-slate-500 tracking-widest mb-2 block">ระยะทาง (กม.)</label>
+          <input type="number" min="0" value={data.distance} onChange={e => setData({...data, distance: e.target.value})} className="w-full bg-white p-4 rounded-2xl border-none shadow-sm outline-none focus:ring-4 focus:ring-blue-500/20 text-blue-600 font-black text-lg transition-all" placeholder="0" required />
+        </div>
+      )}
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-4 md:p-8">
-      <div className="max-w-3xl mx-auto bg-white rounded-2xl shadow-lg overflow-hidden">
-        
-        <div className="bg-green-600 p-6 text-white text-center">
-          <h1 className="text-2xl font-bold">🌿 เช็คอินการเดินทาง (Check-In)</h1>
-          <p className="text-green-100 mt-1">ช่วยกันบันทึกคาร์บอนฟุตพริ้นท์ เพื่อโลกของเรา</p>
-        </div>
+    <div className="min-h-screen bg-slate-50 text-slate-800 font-sans pb-24 relative overflow-hidden">
+      
+      <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-gradient-to-br from-cyan-300 to-blue-500 rounded-full blur-3xl opacity-20 -z-10"></div>
+      <div className="absolute bottom-[-10%] right-[-10%] w-[30vw] h-[30vw] bg-gradient-to-tl from-yellow-300 to-orange-400 rounded-full blur-3xl opacity-20 -z-10"></div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-8">
-          
-          {message && (
-            <div className={`p-4 rounded-lg text-center font-bold ${message.includes('✅') ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}`}>
-              {message}
+      <header className="bg-gradient-to-br from-blue-500 to-cyan-400 text-white pt-16 pb-12 px-6 rounded-b-[3rem] shadow-xl shadow-blue-500/20">
+        <div className="max-w-xl mx-auto">
+          <div className="flex justify-between items-start">
+            <div>
+              <div className="flex items-center gap-2 mb-3 bg-white/20 w-fit px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/30">
+                <Leaf size={16} className="text-yellow-300" />
+                <span className="text-xs font-black uppercase tracking-widest text-white">Carbon Tracker</span>
+              </div>
+              <h1 className="text-3xl font-black tracking-tight drop-shadow-md">สวัสดี, {userInfo.name}</h1>
+              <p className="text-blue-50 mt-2 flex items-center gap-2 font-medium"><Calendar size={16}/> วันนี้ {today}</p>
             </div>
-          )}
-
-          {/* ================= ส่วนที่ 1: ขามาทำงาน ================= */}
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800 border-b pb-2">
-              <span className="bg-green-100 text-green-700 w-8 h-8 rounded-full flex items-center justify-center">1</span> 
-              เดินทางมาทำงาน (ขามา)
-            </h2>
-            
-            {/* 1-Click Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <TransportCard icon={Car} title="รถยนต์ส่วนตัว" legData={leg1} setLegData={setLeg1} />
-              <TransportCard icon={Bike} title="รถจักรยานยนต์" legData={leg1} setLegData={setLeg1} />
-              <TransportCard icon={Bus} title="รถรับส่งบริษัท" legData={leg1} setLegData={setLeg1} />
-              <TransportCard icon={Train} title="รถโดยสารสาธารณะ" legData={leg1} setLegData={setLeg1} />
-            </div>
-
-            {/* ส่วนขยาย (ขยายเมื่อจิ้มเลือกการ์ด) */}
-            {leg1.transportType === 'รถยนต์ส่วนตัว' && (
-              <div className="bg-gray-50 p-4 rounded-xl space-y-4 border animate-fade-in">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">ขับมาเอง หรือ อาศัยเพื่อน?</label>
-                    <select value={leg1.carPoolRole} onChange={e => setLeg1({...leg1, carPoolRole: e.target.value})} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
-                      <option value="Driver">🔘 ฉันเป็นคนขับ (รับจบ)</option>
-                      <option value="Passenger">🔘 นั่งมากับเพื่อน (Eco-Friendly!)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">เชื้อเพลิงที่ใช้</label>
-                    <select value={leg1.fuelType} onChange={e => setLeg1({...leg1, fuelType: e.target.value})} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
-                      <option value="เบนซิน">เบนซิน</option>
-                      <option value="ดีเซล">ดีเซล</option>
-                      <option value="EV">EV (ไฟฟ้า)</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium mb-1">ระยะทางที่เดินทาง (กม.)</label>
-                    <input type="number" required min="1" value={leg1.distance} onChange={e => setLeg1({...leg1, distance: e.target.value})} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="เช่น 15" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium mb-1">นั่งมากี่คน? (รวมคนขับ)</label>
-                    <input type="number" required min="1" value={leg1.occupancy} onChange={e => setLeg1({...leg1, occupancy: e.target.value})} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {leg1.transportType === 'รถรับส่งบริษัท' && (
-              <div className="bg-gray-50 p-4 rounded-xl border animate-fade-in">
-                <label className="block text-sm font-medium mb-1">เลือกสายรถตู้</label>
-                <select value={leg1.vanRouteName} onChange={e => setLeg1({...leg1, vanRouteName: e.target.value})} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" required>
-                  <option value="">-- กรุณาเลือกสายรถ --</option>
-                  {routes.map(r => (
-                    <option key={r._id} value={r.routeName}>{r.routeName}</option>
-                  ))}
-                </select>
-                <p className="text-xs text-gray-500 mt-2">*ไม่ต้องกรอกระยะทาง ระบบจะคำนวณจากเส้นทางอัตโนมัติ</p>
-              </div>
-            )}
-
-            {/* สำหรับมอเตอร์ไซค์ หรือ รถสาธารณะ (ให้กรอกแค่ระยะทาง) */}
-            {(leg1.transportType === 'รถจักรยานยนต์' || leg1.transportType === 'รถโดยสารสาธารณะ') && (
-              <div className="bg-gray-50 p-4 rounded-xl border animate-fade-in">
-                <label className="block text-sm font-medium mb-1">ระยะทางที่เดินทาง (กม.)</label>
-                <input type="number" required min="1" value={leg1.distance} onChange={e => setLeg1({...leg1, distance: e.target.value})} className="w-full border p-2 rounded-lg focus:ring-2 focus:ring-green-500 outline-none" placeholder="เช่น 5" />
-              </div>
-            )}
+            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg text-blue-500 font-black text-xl border-4 border-white/50">M</div>
           </div>
+        </div>
+      </header>
 
-          {/* ================= ส่วนที่ 2: ขากลับบ้าน ================= */}
-          <div className="space-y-4 pt-4 border-t border-dashed border-gray-300">
-            <div className="flex justify-between items-center border-b pb-2">
-              <h2 className="text-xl font-bold flex items-center gap-2 text-gray-800">
-                <span className="bg-orange-100 text-orange-700 w-8 h-8 rounded-full flex items-center justify-center">2</span> 
-                เดินทางกลับบ้าน (ขากลับ)
+      <main className="max-w-xl mx-auto p-6 -mt-6">
+        
+        <button 
+          type="button"
+          onClick={handleOneClickFill}
+          className="w-full mb-8 bg-gradient-to-r from-amber-400 to-orange-400 text-white py-4 px-6 rounded-3xl font-black text-sm shadow-lg shadow-orange-500/30 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3 border border-white/50"
+        >
+          <Zap fill="currentColor" size={20} />
+          เติมข้อมูลจากการเดินทางครั้งล่าสุด (1-Click)
+        </button>
+
+        <form onSubmit={handleSubmit} className="space-y-10">
+          
+          <section>
+            <h2 className="text-lg font-black mb-5 flex items-center gap-3 text-slate-800">
+              <span className="w-2 h-8 bg-gradient-to-b from-blue-400 to-cyan-400 rounded-full shadow-sm"></span>
+              เดินทางมาทำงาน
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              {[ {t:'รถยนต์ส่วนตัว', i:Car}, {t:'รถจักรยานยนต์', i:Bike}, {t:'รถรับส่งบริษัท', i:Bus}, {t:'รถโดยสารสาธารณะ', i:Train} ].map(item => (
+                <button 
+                  key={item.t} type="button" onClick={() => setLeg1({...leg1, transportType: item.t})} 
+                  className={`flex flex-col items-center p-6 rounded-[2rem] transition-all duration-300 ease-out border-2
+                    ${leg1.transportType === item.t 
+                      ? 'bg-gradient-to-br from-blue-500 to-cyan-400 border-transparent text-white shadow-xl shadow-blue-500/30 scale-[1.02]' 
+                      : 'bg-white border-white text-slate-400 shadow-sm hover:shadow-md hover:border-blue-100'}`}
+                >
+                  <item.i size={36} className={leg1.transportType === item.t ? 'text-white' : 'text-slate-300'} strokeWidth={1.5} />
+                  <span className={`text-sm font-black mt-4 ${leg1.transportType === item.t ? 'text-white' : 'text-slate-500'}`}>{item.t}</span>
+                </button>
+              ))}
+            </div>
+            {/* เรียกใช้ฟังก์ชันแทน Component */}
+            {leg1.transportType && renderSubForm(leg1, setLeg1)}
+          </section>
+
+          <section>
+            <div className="flex justify-between items-center mb-5">
+              <h2 className="text-lg font-black flex items-center gap-3 text-slate-800">
+                <span className="w-2 h-8 bg-gradient-to-b from-slate-300 to-slate-400 rounded-full shadow-sm"></span>
+                เดินทางกลับบ้าน
               </h2>
-              
-              {/* ปุ่มเวทมนตร์ ขากลับเหมือนขามา */}
-              <button type="button" onClick={handleToggleSame} className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-bold transition ${sameAsLeg1 ? 'bg-green-100 text-green-700 border-green-500 border' : 'bg-gray-100 text-gray-600 border border-gray-300 hover:bg-gray-200'}`}>
-                {sameAsLeg1 ? <CheckCircle size={16} /> : <Copy size={16} />}
-                {sameAsLeg1 ? 'ใช้ข้อมูลเหมือนขามาแล้ว' : 'ขากลับเหมือนขามา'}
+              <button 
+                type="button" onClick={handleToggleSame} 
+                className={`text-xs px-5 py-2.5 rounded-full font-black transition-all duration-300 ease-out flex items-center gap-2 border-2
+                  ${sameAsLeg1 
+                    ? 'bg-blue-50 text-blue-600 border-blue-200 shadow-sm' 
+                    : 'bg-white text-slate-400 border-white shadow-sm hover:border-slate-200'}`}
+              >
+                <div className={`w-4 h-4 rounded-full flex items-center justify-center ${sameAsLeg1 ? 'bg-blue-500 text-white' : 'border-2 border-slate-300'}`}>
+                  {sameAsLeg1 && <CheckCircle size={10} strokeWidth={4} />}
+                </div>
+                ใช้ข้อมูลเดียวกันกับขามา
               </button>
             </div>
-
-            {/* ถ้าไม่ได้กดปุ่ม "เหมือนขามา" ถึงจะโชว์ให้กรอกใหม่ */}
+            
             {!sameAsLeg1 && (
-              <div className="opacity-80">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                  <TransportCard icon={Car} title="รถยนต์ส่วนตัว" legData={leg2} setLegData={setLeg2} />
-                  <TransportCard icon={Bike} title="รถจักรยานยนต์" legData={leg2} setLegData={setLeg2} />
-                  <TransportCard icon={Bus} title="รถรับส่งบริษัท" legData={leg2} setLegData={setLeg2} />
-                  <TransportCard icon={Train} title="รถโดยสารสาธารณะ" legData={leg2} setLegData={setLeg2} />
+              <div className="animate-in slide-in-from-top-4 duration-500">
+                <div className="grid grid-cols-2 gap-4">
+                  {[ {t:'รถยนต์ส่วนตัว', i:Car}, {t:'รถจักรยานยนต์', i:Bike}, {t:'รถรับส่งบริษัท', i:Bus}, {t:'รถโดยสารสาธารณะ', i:Train} ].map(item => (
+                    <button 
+                      key={item.t} type="button" onClick={() => setLeg2({...leg2, transportType: item.t})} 
+                      className={`flex flex-col items-center p-6 rounded-[2rem] transition-all duration-300 ease-out border-2
+                        ${leg2.transportType === item.t 
+                          ? 'bg-gradient-to-br from-blue-500 to-cyan-400 border-transparent text-white shadow-xl shadow-blue-500/30 scale-[1.02]' 
+                          : 'bg-white border-white text-slate-400 shadow-sm hover:shadow-md hover:border-blue-100'}`}
+                    >
+                      <item.i size={36} className={leg2.transportType === item.t ? 'text-white' : 'text-slate-300'} strokeWidth={1.5} />
+                      <span className={`text-sm font-black mt-4 ${leg2.transportType === item.t ? 'text-white' : 'text-slate-500'}`}>{item.t}</span>
+                    </button>
+                  ))}
                 </div>
-                {/* (เพื่อความสั้นกระชับ ติวเตอร์ซ่อนฟอร์มย่อยของขากลับไว้ก่อน ให้เน้นใช้ปุ่มเหมือนขามาครับ) */}
-                <p className="text-center text-sm text-gray-500 mt-2">กรุณากดปุ่ม <b>"ขากลับเหมือนขามา"</b> หรือกรอกข้อมูลใหม่</p>
+                {/* เรียกใช้ฟังก์ชันแทน Component */}
+                {leg2.transportType && renderSubForm(leg2, setLeg2)}
               </div>
             )}
-          </div>
+          </section>
 
-          <button type="submit" disabled={loading} className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 rounded-xl shadow-lg transition duration-200 flex justify-center items-center gap-2 text-lg disabled:opacity-50">
-            <Send size={24} /> 
-            {loading ? 'กำลังส่งข้อมูล...' : 'บันทึกการเดินทาง (Check-In)'}
+          <button 
+            type="submit" 
+            disabled={loading || !leg1.transportType || (!sameAsLeg1 && !leg2.transportType)} 
+            className="w-full bg-gradient-to-r from-emerald-400 to-green-500 text-white py-5 rounded-3xl font-black text-lg shadow-xl shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 border border-white/20"
+          >
+            {loading ? 'กำลังประมวลผล...' : 'บันทึกการเดินทาง'} <Send size={22} />
           </button>
-
         </form>
-      </div>
+      </main>
+
+      {showSummary && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-6 z-50 animate-in fade-in duration-300">
+          <div className="bg-white rounded-[3rem] p-10 max-w-sm w-full shadow-2xl text-center animate-in zoom-in-95 duration-500 border-4 border-white/50">
+            <div className="w-24 h-24 bg-gradient-to-br from-emerald-400 to-green-500 text-white rounded-full flex items-center justify-center mx-auto mb-8 shadow-xl shadow-green-500/30">
+              <CheckCircle size={48} strokeWidth={2} />
+            </div>
+            <h3 className="text-2xl font-black text-slate-800 mb-2">บันทึกสำเร็จ!</h3>
+            <p className="text-slate-500 text-sm font-bold leading-relaxed">การเดินทางของคุณวันนี้ปล่อยคาร์บอนฯ</p>
+            <div className="my-6 bg-gradient-to-br from-slate-50 to-blue-50 py-8 rounded-[2rem] border border-blue-100 shadow-inner">
+              <span className="text-6xl font-black text-blue-600 drop-shadow-sm">{totalResult.toFixed(3)}</span>
+              {/* 🛠️ แก้บั๊กข้อ 2: เอาคำว่า uppercase ออกจากหน่วยตรงนี้ครับ */}
+              <span className="text-sm font-black text-slate-400 block mt-2 tracking-widest">kgCO2e</span>
+            </div>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="w-full bg-slate-800 text-white py-4 rounded-2xl font-black mt-2 hover:bg-slate-900 transition-colors shadow-lg shadow-slate-800/20"
+            >
+              ตกลง
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

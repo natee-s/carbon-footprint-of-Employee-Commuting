@@ -3,6 +3,16 @@ import CarbonRecord from '../models/CarbonRecord.js';
 
 const router = express.Router();
 
+// 📤 GET: ดึงข้อมูลประวัติการเดินทางทั้งหมด (สำหรับทำ Dashboard)
+router.get('/', async (req, res) => {
+  try {
+    // ดึงข้อมูลทั้งหมด และเรียงจากล่าสุดไปเก่าสุด
+    const records = await CarbonRecord.find().sort({ createdAt: -1 });
+    res.status(200).json({ success: true, data: records });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
 
 // ==========================================
 // 📥 ท่อที่ 1: รับข้อมูลใหม่เข้ามาบันทึก (CREATE)
@@ -60,5 +70,16 @@ router.get('/', async (req, res) => {
     });
   }
 });
+
+// 3. 🗑️ DELETE: ลบข้อมูลการเดินทาง (ส่วนที่คุณแมนถามถึง แทรกอยู่ตรงนี้ครับ!)
+router.delete('/:id', async (req, res) => {
+  try {
+    await CarbonRecord.findByIdAndDelete(req.params.id);
+    res.status(200).json({ success: true, message: 'ลบข้อมูลสำเร็จ' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 
 export default router; // ส่งท่อนี้ออกไปให้ไฟล์อื่นใช้งาน
