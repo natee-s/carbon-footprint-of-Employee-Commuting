@@ -7,7 +7,7 @@ export default function UserCheckIn() {
   const [showSummary, setShowSummary] = useState(false);
   const [totalResult, setTotalResult] = useState(0);
 
-  const userInfo = { name: "คุณแมน (Natee Siriudom)" }; 
+  const userInfo = { name: "คุณแมน" }; 
   const today = new Date().toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
 
   const [leg1, setLeg1] = useState({ transportType: '', fuelType: 'เบนซิน', carPoolRole: 'Driver', occupancy: 1, vanRouteName: '', distance: '' });
