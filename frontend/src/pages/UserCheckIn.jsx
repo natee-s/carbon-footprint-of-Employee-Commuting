@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Car, Bus, Train, Bike, CheckCircle, Send, Leaf, Calendar, Zap } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // 👈 นำเข้า useNavigate
+import { Car, Bus, Train, Bike, CheckCircle, Send, Leaf, Calendar, Zap, LayoutDashboard, Settings } from 'lucide-react'; // 👈 นำเข้าไอคอนเพิ่ม
 
 export default function UserCheckIn() {
+  const navigate = useNavigate(); // 👈 ประกาศใช้ฟังก์ชันนำทาง
+
   const [factors, setFactors] = useState([]);
   const [routes, setRoutes] = useState([]);
   const [showSummary, setShowSummary] = useState(false);
@@ -98,7 +101,6 @@ export default function UserCheckIn() {
     setLoading(false);
   };
 
-  // 🛠️ แก้บั๊กข้อ 1: เปลี่ยนจาก Component (const SubForm = () =>) เป็นฟังก์ชัน Render ธรรมดา
   const renderSubForm = (data, setData) => (
     <div className="mt-5 space-y-4 animate-in slide-in-from-top-4 duration-300">
       {data.transportType === 'รถยนต์ส่วนตัว' && (
@@ -154,19 +156,40 @@ export default function UserCheckIn() {
       <div className="absolute top-[-10%] left-[-10%] w-[40vw] h-[40vw] bg-gradient-to-br from-cyan-300 to-blue-500 rounded-full blur-3xl opacity-20 -z-10"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[30vw] h-[30vw] bg-gradient-to-tl from-yellow-300 to-orange-400 rounded-full blur-3xl opacity-20 -z-10"></div>
 
-      <header className="bg-gradient-to-br from-blue-500 to-cyan-400 text-white pt-16 pb-12 px-6 rounded-b-[3rem] shadow-xl shadow-blue-500/20">
+      <header className="bg-gradient-to-br from-blue-500 to-cyan-400 text-white pt-10 pb-12 px-6 rounded-b-[3rem] shadow-xl shadow-blue-500/20">
         <div className="max-w-xl mx-auto">
-          <div className="flex justify-between items-start">
-            <div>
-              <div className="flex items-center gap-2 mb-3 bg-white/20 w-fit px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/30">
-                <Leaf size={16} className="text-yellow-300" />
-                <span className="text-xs font-black uppercase tracking-widest text-white">Carbon Tracker</span>
-              </div>
-              <h1 className="text-3xl font-black tracking-tight drop-shadow-md">สวัสดี, {userInfo.name}</h1>
-              <p className="text-blue-50 mt-2 flex items-center gap-2 font-medium"><Calendar size={16}/> วันนี้ {today}</p>
+          
+          {/* 🛠️ ปรับปรุงส่วน Header เพิ่มปุ่ม Navigation */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div className="flex items-center gap-2 bg-white/20 px-4 py-1.5 rounded-full backdrop-blur-sm border border-white/30 w-fit">
+              <Leaf size={16} className="text-yellow-300" />
+              <span className="text-xs font-black uppercase tracking-widest text-white">Carbon Tracker</span>
             </div>
-            <div className="w-14 h-14 bg-white rounded-full flex items-center justify-center shadow-lg text-blue-500 font-black text-xl border-4 border-white/50">M</div>
+
+            {/* ปุ่มนำทางมุมขวาบน */}
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => navigate('/dashboard')}
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-3 py-2 rounded-xl text-white text-xs font-bold transition-all border border-white/20 shadow-sm"
+              >
+                <LayoutDashboard size={16} /> <span className="hidden sm:inline">Dashboard</span>
+              </button>
+              <button 
+                onClick={() => navigate('/admin')}
+                className="flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur-md px-3 py-2 rounded-xl text-white text-xs font-bold transition-all border border-white/20 shadow-sm"
+              >
+                <Settings size={16} /> <span className="hidden sm:inline">Admin Panel</span>
+              </button>
+              {/* ไอคอนโปรไฟล์ */}
+              <div className="w-10 h-10 ml-1 bg-white rounded-full flex items-center justify-center shadow-lg text-blue-500 font-black text-lg border-2 border-white/50">M</div>
+            </div>
           </div>
+
+          <div>
+            <h1 className="text-3xl font-black tracking-tight drop-shadow-md">สวัสดี, {userInfo.name}</h1>
+            <p className="text-blue-50 mt-2 flex items-center gap-2 font-medium"><Calendar size={16}/> วันนี้ {today}</p>
+          </div>
+
         </div>
       </header>
 
@@ -202,7 +225,6 @@ export default function UserCheckIn() {
                 </button>
               ))}
             </div>
-            {/* เรียกใช้ฟังก์ชันแทน Component */}
             {leg1.transportType && renderSubForm(leg1, setLeg1)}
           </section>
 
@@ -242,7 +264,6 @@ export default function UserCheckIn() {
                     </button>
                   ))}
                 </div>
-                {/* เรียกใช้ฟังก์ชันแทน Component */}
                 {leg2.transportType && renderSubForm(leg2, setLeg2)}
               </div>
             )}
@@ -268,7 +289,6 @@ export default function UserCheckIn() {
             <p className="text-slate-500 text-sm font-bold leading-relaxed">การเดินทางของคุณวันนี้ปล่อยคาร์บอนฯ</p>
             <div className="my-6 bg-gradient-to-br from-slate-50 to-blue-50 py-8 rounded-[2rem] border border-blue-100 shadow-inner">
               <span className="text-6xl font-black text-blue-600 drop-shadow-sm">{totalResult.toFixed(3)}</span>
-              {/* 🛠️ แก้บั๊กข้อ 2: เอาคำว่า uppercase ออกจากหน่วยตรงนี้ครับ */}
               <span className="text-sm font-black text-slate-400 block mt-2 tracking-widest">kgCO2e</span>
             </div>
             <button 
