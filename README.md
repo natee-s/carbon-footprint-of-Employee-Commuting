@@ -21,3 +21,8 @@ Carbon Footprint Tracker is a full-stack web application designed to help organi
 **Backend:**
 * Node.js & Express.js (RESTful API)
 * MongoDB & Mongoose (Database)
+
+## 🖼 Preview
+![user UI](./screenshots/user.jpg)
+![admin UI](./screenshots/admin.jpg)
+![Executive Dashboard UI](./screenshots/dashboard.jpg)
