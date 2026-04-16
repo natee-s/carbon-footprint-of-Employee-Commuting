@@ -20,7 +20,7 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchCarbonData = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/carbon');
+        const response = await fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/carbon');
         const result = await response.json();
         if (result.success) setRawRecords(result.data);
       } catch (error) {

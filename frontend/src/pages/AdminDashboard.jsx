@@ -20,9 +20,9 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const [efRes, routeRes, carbonRes] = await Promise.all([
-        fetch('http://localhost:5000/api/emission-factors'),
-        fetch('http://localhost:5000/api/van-routes'),
-        fetch('http://localhost:5000/api/carbon')
+        fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/emission-factors'),
+        fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/van-routes'),
+        fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/carbon')
       ]);
       const efJson = await efRes.json();
       const routeJson = await routeRes.json();
@@ -43,7 +43,7 @@ export default function AdminDashboard() {
   const handleEfSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/emission-factors', {
+      const response = await fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/emission-factors', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...efFormData, efValue: Number(efFormData.efValue) })
       });
@@ -58,14 +58,14 @@ export default function AdminDashboard() {
 
   const handleDeleteEf = async (id) => {
     if (!window.confirm('คุณแน่ใจหรือไม่ว่าต้องการลบข้อมูลนี้?')) return;
-    const response = await fetch(`http://localhost:5000/api/emission-factors/${id}`, { method: 'DELETE' });
+    const response = await fetch(`https://carbon-footprint-of-employee-commuting.onrender.com/api/emission-factors/${id}`, { method: 'DELETE' });
     if ((await response.json()).success) fetchData();
   };
 
   const handleRouteSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/api/van-routes', {
+      const response = await fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/van-routes', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...routeFormData, distance: Number(routeFormData.distance), passengerCount: Number(routeFormData.passengerCount) })
       });
@@ -80,14 +80,14 @@ export default function AdminDashboard() {
 
   const handleDeleteRoute = async (id) => {
     if (!window.confirm('ยืนยันการลบสายรถตู้นี้?')) return;
-    const response = await fetch(`http://localhost:5000/api/van-routes/${id}`, { method: 'DELETE' });
+    const response = await fetch(`https://carbon-footprint-of-employee-commuting.onrender.com/api/van-routes/${id}`, { method: 'DELETE' });
     if ((await response.json()).success) fetchData();
   };
 
   const handleDeleteCarbon = async (id) => {
     if (!window.confirm('ลบข้อมูลการเดินทางนี้? (ผลรวม Dashboard จะเปลี่ยนไป)')) return;
     try {
-      const response = await fetch(`http://localhost:5000/api/carbon/${id}`, { method: 'DELETE' });
+      const response = await fetch(`https://carbon-footprint-of-employee-commuting.onrender.com/api/carbon/${id}`, { method: 'DELETE' });
       if ((await response.json()).success) {
         setCarbonRecords(carbonRecords.filter(r => r._id !== id));
         setMessage('🗑️ ลบข้อมูลสำเร็จ');

@@ -22,8 +22,8 @@ export default function UserCheckIn() {
     const fetchData = async () => {
       try {
         const [efRes, routeRes] = await Promise.all([
-          fetch('http://localhost:5000/api/emission-factors'),
-          fetch('http://localhost:5000/api/van-routes')
+          fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/emission-factors'),
+          fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/van-routes')
         ]);
         const efJson = await efRes.json();
         const routeJson = await routeRes.json();
@@ -37,7 +37,7 @@ export default function UserCheckIn() {
   const handleOneClickFill = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/carbon');
+      const response = await fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/carbon');
       const json = await response.json();
       if (json.success && json.data.length > 0) {
         const lastLeg1 = json.data.find(r => r.leg === 'ขามาทำงาน');
@@ -86,11 +86,11 @@ export default function UserCheckIn() {
 
     try {
       await Promise.all([
-        fetch('http://localhost:5000/api/carbon', { 
+        fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/carbon', { 
           method: 'POST', headers: { 'Content-Type': 'application/json' }, 
           body: JSON.stringify({ ...leg1, activityType: 'Employee Commuting', carbonEmission: c1, leg: 'ขามาทำงาน' }) 
         }),
-        fetch('http://localhost:5000/api/carbon', { 
+        fetch('https://carbon-footprint-of-employee-commuting.onrender.com/api/carbon', { 
           method: 'POST', headers: { 'Content-Type': 'application/json' }, 
           body: JSON.stringify({ ...(sameAsLeg1 ? leg1 : leg2), activityType: 'Employee Commuting', carbonEmission: c2, leg: 'ขากลับบ้าน' }) 
         })
